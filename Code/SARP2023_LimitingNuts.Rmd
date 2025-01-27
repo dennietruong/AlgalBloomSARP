@@ -1,0 +1,197 @@
+---
+title: "SARP_limitingNuts"
+author: "DennieT"
+date: "2023-07-09"
+output: html_document
+---
+
+
+```{r}
+library(readr)
+library(tidyr)
+library(ggplot2)
+library("tidyverse")
+library(ggplot2)
+library(plyr)
+library('pracma')
+library(lubridate)
+library("dplyr")
+```
+
+
+
+#Set working directory
+```{r}
+setwd("C:/Users/denni/Documents/RStudioSARP")
+```
+
+
+
+#Import Data
+```{r}
+DATA <- read.csv("CBPnuts.csv", header=TRUE) #header TRUE mean first line of csv has heading
+
+```
+
+
+#Make SampleDate into Datetime format
+```{r}
+DATA <- DATA %>%
+   mutate(Date = ymd(DATA$SampleDate))
+```
+
+
+
+#TN/TP ratio
+```{r}
+
+DATA <- DATA %>% 
+  mutate(year = year(DATA$Date),
+         month = month(DATA$Date),
+         day = day(DATA$Date),
+         doy = yday(DATA$Date))
+
+#Combine rows
+DATA2 <- DATA %>%
+  group_by(EventId, Station, SampleDate) %>%
+  summarise_at(vars(2:6), mean, na.rm = TRUE) #var(2) --> count # columns to 2 from SampleDate
+
+DATA2<- na.omit(DATA2) #Omit all rows with NAs
+
+
+DATA2$Ratio <- DATA2$TN / DATA2$TP    # Creating new variable
+DATA2       
+```
+
+
+
+```{r, fig.height = 4, fig.width=8}
+
+CHL_nuts <- DATA2 %>%
+  ggplot(aes(x = Date, y=Ratio,color = factor(Station)))+
+  geom_line(size=0.8, alpha=0.9) + #scale_x_date(date_labels = "%Y")+
+  facet_wrap(~year,nrow = 1,scales = "free_x") +
+  theme_light()+
+  theme(axis.text.x = element_text(angle = 90, vjust =0.5, hjust = 0.5))+
+  xlab('Date') + ylab('TN/TP ratio')+
+  guides(color = guide_legend(title = 'Station'))+
+  labs(title = "TN/TP Timeseries of all Stations") +
+  scale_x_date(date_labels = "%b %d") +
+  scale_color_manual(values=c('Red','Blue','limegreen','Purple','Brown'))+
+  scale_y_continuous(limits = c(0, 25))
+
+
+png(filename = 'CHL_nuts.png', height = 2000, width = 4000, res = 400) 
+#defines png, res is in dpi, h & w in pixels
+
+CHL_nuts
+dev.off()
+
+```
+
+
+
+
+#Using NH4F/PO4F as proxy for TN/TP
+```{r}
+DATAi <- read.csv("CBPnutsproxy.csv", header=TRUE) #header TRUE mean first line of csv has heading
+```
+
+
+
+#Make SampleDate into Datetime format
+```{r}
+DATAi <- DATAi %>%
+   mutate(Date = ymd(DATAi$SampleDate))
+```
+
+
+```{r}
+DATAi <- DATAi %>% 
+  mutate(year = year(DATA$Date),
+         month = month(DATA$Date),
+         day = day(DATA$Date),
+         doy = yday(DATA$Date))
+
+#Combine rows
+DATAii <- DATAi %>%
+  group_by(EventId, Station, SampleDate) %>%
+  summarise_at(vars(2:6), mean, na.rm = TRUE) #var(2) --> count # columns to 2 from SampleDate
+
+DATAii<- na.omit(DATAii) #Omit all rows with NAs
+
+
+DATAii$Ratio <- DATAii$NH4F / DATAii$PO4F    # Creating new variable
+DATAii       
+```
+
+
+
+```{r, fig.height = 4, fig.width=8}
+
+CHL_nuts2 <- DATAii %>%
+  ggplot(aes(x = Date, y=Ratio,color = factor(Station)))+
+  geom_line(size=0.8, alpha=0.9) + #scale_x_date(date_labels = "%Y")+
+  facet_wrap(~year,nrow = 1,scales = "free_x") +
+  theme(axis.text.x = element_text(angle = 90, vjust =0.5, hjust = 0.5))+
+  xlab('Date') + ylab('NH4F/PO4F')+
+  guides(color = guide_legend(title = 'Station'))+
+  labs(title = "NH4F/PO4F Timeseries of all Stations") +
+  scale_x_date(date_labels = "%b %d") +
+  scale_color_manual(values=c('Red','Blue','limegreen','Purple','Brown'))+
+  scale_y_continuous(limits = c(0, 40))
+
+
+png(filename = 'CHL_nutsproxy.png', height = 2000, width = 4000, res = 400) 
+#defines png, res is in dpi, h & w in pixels
+
+CHL_nuts2
+dev.off()
+```
+
+
+
+
+
+
+
+#Model
+```{r}
+DATAl <- read.csv("CBPnutsALL.csv", header=TRUE) #header TRUE mean first line of csv has heading
+```
+
+
+
+#Make SampleDate into Datetime format
+```{r}
+DATAl <- DATAl %>%
+   mutate(Date = ymd(DATAl$SampleDate))
+```
+
+
+```{r}
+
+#Combine rows
+DATAll <- DATAl %>%
+  group_by(EventId, Station, SampleDate) %>%
+  summarise_at(vars(2:6), mean, na.rm = TRUE) #var(2) --> count # columns to 2 from SampleDate
+
+DATAll<- na.omit(DATAll) #Omit all rows with NAs
+
+
+
+DATAll$TNTP <- DATAll$TN / DATAll$TP    # Creating new variable
+DATAll$NH4PO4 <- DATAll$NH4F / DATAll$PO4F    # Creating new variable
+DATAll       
+```
+
+```{r}
+model1<-lm(TNTP~ NH4PO4, data = DATAll)
+summary(model1)
+
+ggplot(DATAll, aes(x=NH4PO4, y=TNTP)) +
+  geom_point() + 
+  ggtitle("Scatterplot: TP/TN v. NH4/PO4")+
+  geom_abline(slope=1)
+```
+

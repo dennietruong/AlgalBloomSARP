@@ -1,0 +1,278 @@
+---
+title: "SARP2023_GAMSUpdate"
+author: "DennieT"
+date: "2023-07-17"
+output: html_document
+---
+
+
+
+```{r}
+library(mgcv) #For using GAM
+
+library(readr)
+library(tidyr)
+library(ggplot2)
+library("tidyverse") #for data manipulation and visualization
+library(ggplot2)
+library(plyr)
+library('pracma')
+library(lubridate)
+library("dplyr")
+library(mgcv)
+```
+
+
+
+
+#Set working directory
+```{r}
+setwd("C:/Users/denni/Documents/RStudioSARP")
+```
+
+
+
+#Import Data
+```{r}
+DATA <- read.csv("GAMS.csv", header=TRUE) #header TRUE mean first line of csv has heading
+```
+
+
+
+
+#GAM model
+Not including SIF because not enough data points to analyze all 5 stations
+```{r}
+GAM_ALL <- gam(CHLA~te(NH4F,PO4F)+s(TURB_NTU)+s(WTEMP),
+                data=DATA, 
+                family = 'gaussian',
+                method = 'REML',
+                select = TRUE)
+#te()--> tensor product, to include the interaction, variables have diff units/or not, accounts for main effect of each variable as well
+
+
+
+#Diagnostic Tests
+summary(GAM_ALL)
+plot(GAM_ALL)
+gam.check(GAM_ALL, rep = 500) #rep = 500 --> simulated data from model to create confidence band
+
+
+
+DATA$preds_gamALL <- 
+  predict(GAM_ALL, type = 'response') #predict works in space of your family distribution
+
+plot(DATA$CHLA, DATA$preds_gamALL, type = "p", xlab = "CHLA", ylab = "Predicted CHLA", main = "Predicted CHLA vs. CHLA")
+
+
+#library(gratia)
+#appraise(GAM_ALL2, method = 'simulate')
+
+
+
+# Function for Root Mean Squared Error
+RMSE <- function(error) { sqrt(mean(error^2)) }
+RMSE(GAM_ALL$residuals)
+
+
+
+# Function for Mean Absolute Error
+mae <- function(error) { mean(abs(error)) }
+mae(GAM_ALL$residuals)
+```
+
+
+```{r}
+plot(GAM_ALL, page = 4, scheme = 2)
+```
+
+
+
+```{r}
+library(ggeffects)
+# Get predictions and confidence intervals
+#mydf1 <- ggpredict(GAM_ALL, terms = "PC")
+#ggplot() +
+#  geom_ribbon(data = mydf1, aes(x = x, ymin = conf.low, ymax = conf.high), alpha = 0.3) +  # Confidence band
+#  geom_line(data = mydf1, aes(x = x, y = predicted)) +  # Predicted values
+#  geom_point(data = DATA, aes(x = PC, y = CHLA), color = "red", size = 2) +  # CHLA data points
+#  geom_rug(data = mydf1, aes(x = x)) +  # Rug
+#  labs(x = "PC", y = "CHLA") +
+#  ggtitle("CHLA v. PC")+
+#  theme_light()
+
+
+# Plotting interactions between NH4F and PO4F
+result <- ggpredict(GAM_ALL, c("NH4F", "PO4F"))
+plot(result)
+
+
+mydf4 <- ggpredict(GAM_ALL, terms = "TURB_NTU")
+TURBplot <- ggplot() +
+  geom_ribbon(data = mydf4, aes(x = x, ymin = conf.low, ymax = conf.high), alpha = 0.3) +  # Confidence band
+  #geom_point(data = DATA, aes(x = TURB_NTU, y = CHLA), color = "red", size = 1, alpha = 0.5) +  # CHLA data points
+  geom_line(data = mydf4, aes(x = x, y = predicted)) +  # Predicted values
+  geom_rug(data = mydf4, aes(x = x)) +  # Rug
+  labs(x = "Turbidity (NTU)", y = "Chl-a (ug/L)") +
+  theme_light()
+png(filename = 'TURBinteractionplot.png', height = 2000, width = 3200, res = 500) 
+#defines png, res is in dpi, h & w in pixels
+TURBplot
+dev.off()
+
+
+mydf5 <- ggpredict(GAM_ALL, terms = "WTEMP")
+WTEMPplot <- ggplot() +
+  geom_ribbon(data = mydf5, aes(x = x, ymin = conf.low, ymax = conf.high), alpha = 0.3) +  # Confidence band
+  #geom_point(data = DATA, aes(x = WTEMP, y = CHLA), color = "red", size = 1, alpha = 0.5) +  # CHLA data points
+  geom_line(data = mydf5, aes(x = x, y = predicted)) +  # Predicted values
+  geom_rug(data = mydf5, aes(x = x)) +  # Rug
+  labs(x = "Water Temperature (C)", y = "Chl-a (ug/L)") +
+  theme_light()
+#plot(mydf5)
+png(filename = 'WTEMPinteractionplot.png', height = 2000, width = 3200, res = 500) 
+#defines png, res is in dpi, h & w in pixels
+WTEMPplot
+dev.off()
+
+```
+
+
+
+#NH4F and PO4F Interaction 1
+```{r}
+vis.gam(GAM_ALL, view = c("NH4F", "PO4F"), plot.type = 'persp')
+```
+
+
+#NH4F and PO4F Interaction 2
+```{r}
+vis.gam(GAM_ALL, view = c("NH4F", "PO4F"), plot.type = 'contour', color = 'cm')
+```
+
+
+
+#NH4F and PO4F Interaction 3
+```{r}
+# Generate grid of values for NH4F and PO4F
+library(rgl)
+library(plotly)
+
+nh4f_seq <- seq(min(DATA$NH4F), max(DATA$NH4F), length.out = 50)
+po4f_seq <- seq(min(DATA$PO4F), max(DATA$PO4F), length.out = 50)
+grid <- expand.grid(NH4F = nh4f_seq, PO4F = po4f_seq, 
+                    PC = mean(DATA$PC),
+                    TURB_NTU = mean(DATA$TURB_NTU),
+                    WTEMP = mean(DATA$WTEMP))
+
+# Predict using the GAM model on the grid
+grid$CHLA <- predict(GAM_ALL, newdata = grid)
+
+# Create 3D interactive plot using plot_ly
+plot_ly(data = grid, x = ~NH4F, y = ~PO4F, z = ~CHLA, type = "scatter3d", mode = "markers")
+
+```
+
+
+```{r}
+ggpredict(GAM_ALL, c("NH4F", "PO4F [quart]")) # this gives you five predictions across all values of NH4F, at the min, 25%, 50%, 75%, and max of PO4F (compared to the default, which provides only 3 lines at levels of P04F that do not span the full range of your PO4F)
+
+plot(result, facet = T) # the error ribbons overlap quite a bit, so this provides a cleaner of your interaction
+```
+
+
+
+```{r}
+# Plotting interactions between NH4F and PO4F
+result <- ggpredict(GAM_ALL, c("NH4F", "PO4F [quart]"))
+plot(result, facet = T)+xlab("Ammonium (mg/L)")+ ylab("Chl-a (ug/L)")+
+  labs(subtitle = "Phosphate (mg/L) in Quartile", title=NULL)
+
+
+
+```
+
+
+
+```{r}
+# Compute predicted values
+result <- ggpredict(GAM_ALL, c("NH4F", "PO4F [quart]"))
+
+# Create a custom labeller function
+custom_labeller <- function(label) {
+  label <- recode(label, "1" = "Quartile 1", "2" = "Quartile 2", "3" = "Quartile 3", "4" = "Quartile 4")
+  return(label)
+}
+
+# Create the plot with facet labels
+ggplot(result, aes(x = x, y = predicted, group = group, color = group)) +
+  geom_line(show.legend = FALSE) +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.2, show.legend = FALSE) +
+  facet_wrap(~ group, ncol = 2, labeller = labeller(group = custom_labeller)) +
+  xlab("Ammonium") +
+  ylab("Chl-a (ug/L)") +
+  labs(subtitle = "Phosphate (mg/L) in Quartile")
+
+```
+
+
+
+
+#Make SampleDate into Datetime format & Plot predicted figure
+```{r}
+#Change DateTime to datetime format
+DATA <- DATA %>%
+   mutate(Date = ymd(DATA$SampleDate))
+
+
+
+CHL_Timeseries <- DATA %>%
+  ggplot(aes(x = Date)) +
+  geom_point(aes(y = CHLA, colour = "Data")) +
+  geom_line(aes(y = preds_gamALL, colour = "Fitted")) +
+  labs(y = NULL,
+       title = "Genearalized Additive Model: Using Environmental Factors") +
+  scale_colour_manual(values=c(Data="black",Fitted="#D55E00")) +
+  guides(colour = guide_legend(title = NULL))+
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y") +
+  facet_grid(vars(Station))+
+  theme_light()
+
+png(filename = 'CHLGAMS_Timeseries.png', height = 4000, width = 4000, res = 400) 
+#defines png, res is in dpi, h & w in pixels
+
+CHL_Timeseries
+dev.off()
+```
+
+
+```{r}
+p <- predict(GAM_ALL, DATA, type = "link", se.fit = TRUE)
+
+upr <- p$fit + (2 * p$se.fit)
+lwr <- p$fit - (2 * p$se.fit)
+
+CHL_Timeseries <- DATA %>%
+  ggplot(aes(x = Date)) +
+  geom_point(aes(y = CHLA, colour = "Data")) +
+  geom_line(aes(y = preds_gamALL, colour = "Fitted")) +
+  geom_ribbon(aes(ymin = lwr, ymax = upr, fill = "Confidence Band"), alpha = 0.7) +  # Add the confidence band
+  labs(x = "Date", 
+       y = "Chl-a (ug/L)",
+       title = "Generalized Additive Model: Using Environmental Factors") +
+  scale_colour_manual(values = c(Data = "black", Fitted = "#D55E00")) +
+  scale_fill_manual(values = "grey") +  # Set the color of the confidence band
+  guides(colour = guide_legend(title = NULL), fill = guide_legend(title = NULL)) +  # Remove legend titles
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y") +
+  facet_grid(vars(Station)) +
+  theme_light()
+
+
+png(filename = 'CHLGAMS_Timeseries_CI.png', height = 7500, width = 6500, res = 550) 
+#defines png, res is in dpi, h & w in pixels
+
+CHL_Timeseries
+dev.off()
+```
+
+
