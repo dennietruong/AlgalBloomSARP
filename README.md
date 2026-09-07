@@ -81,9 +81,9 @@ The project demonstrates how **environmental monitoring, statistical modeling, a
 ## 📁 Repository
 
 ```text
-├── Code/       # Analysis scripts
-├── Data/       # Project datasets
-├── References/    # Project references/sources
+├── Code/                        # Analysis scripts
+├── Data/                        # Project datasets
+├── References/                  # Project references/sources
 ├── SARPEast2023_DTruong.pdf     # Research poster
 └── README.md
 ```
