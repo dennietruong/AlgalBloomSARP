@@ -2,9 +2,9 @@
 
 **Dennie Truong · Colby College '24 · SARP East Undergraduate Research**
 
-[![Research](https://img.shields.io/badge/Project-Environmental%20Research-2f6f8f)](https://github.com/)
-[![Remote Sensing](https://img.shields.io/badge/Focus-LANDSAT%208-4c956c)](https://www.usgs.gov/landsat-missions/landsat-8)
-[![Study Period](https://img.shields.io/badge/Data-2013--2022-6c757d)](https://www.usgs.gov/landsat-missions/landsat-8)
+[![Research](https://img.shields.io/badge/Project-Environmental%20Research-2f6f8f)]([https://github.com/](https://github.com/dennietruong/AlgalBloomSARP/blob/main/SARPEast2023_DTruong.pdf))
+[![Remote Sensing](https://img.shields.io/badge/Focus-LANDSAT%208-4c956c)][(https://www.usgs.gov/landsat-missions/landsat-8](https://github.com/dennietruong/AlgalBloomSARP/blob/main/SARPEast2023_DTruong.pdf))
+[![Study Period](https://img.shields.io/badge/Data-2013--2022-6c757d)]([https://www.usgs.gov/landsat-missions/landsat-8](https://github.com/dennietruong/AlgalBloomSARP/blob/main/SARPEast2023_DTruong.pdf))
 
 > **Investigating the environmental factors associated with phytoplankton blooms in the James River and evaluating the utility of LANDSAT 8 data for characterizing algal blooms.**
 
