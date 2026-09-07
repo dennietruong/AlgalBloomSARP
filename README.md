@@ -51,7 +51,7 @@ Used GAM to evaluate relationships between chlorophyll-a and environmental varia
 | RMSE               |  **7.83** |
 | MAE                |  **5.43** |
 
-### 🛰️ LANDSAT 8
+## 🛰️ LANDSAT 8
 
 Used LANDSAT 8 spectral data to estimate and spatially characterize chlorophyll-a across the James River.
 
